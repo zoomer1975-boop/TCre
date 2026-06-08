@@ -1,0 +1,20 @@
+services:
+  tcredit-postgres:
+    image: postgres:16-alpine
+    container_name: tcredit-postgres
+    environment:
+      POSTGRES_DB: tcredit
+      POSTGRES_USER: tcredit
+      POSTGRES_PASSWORD: tcredit
+    ports:
+      - "5432:5432"
+    volumes:
+      - tcredit_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcredit -d tcredit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tcredit_postgres_data:

@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmploymentType {
+  FACULTY
+  STAFF
+  CONTRACT
+}
+
+enum UserRole {
+  CONTRIBUTOR
+  APPROVER
+  COMMITTEE
+  ADMIN
+}
+
+enum ContributionType {
+  EXCELLENCE
+  COLLABORATION
+  IMPROVEMENT
+  CHALLENGE
+  PRIDE
+  DEDICATION
+}
+
+enum EffortTier {
+  L1
+  L2
+  L3
+}
+
+enum ContributionStatus {
+  DRAFT
+  PENDING_RECOMMEND
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  UNBILLABLE
+  UNDER_REVIEW
+}
+
+enum AppealStatus {
+  SUBMITTED
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReviewStatus {
+  OPEN
+  REVIEWING
+  CLOSED
+}
+
+enum RecommendationStatus {
+  REQUESTED
+  SUBMITTED
+  CANCELED
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+model OrgUnit {
+  id        String    @id @default(cuid())
+  name      String
+  code      String    @unique
+  parentId  String?
+  parent    OrgUnit?  @relation("OrgTree", fields: [parentId], references: [id])
+  children  OrgUnit[] @relation("OrgTree")
+  users     User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model User {
+  id              String           @id @default(cuid())
+  employeeNo      String           @unique
+  name            String
+  email           String           @unique
+  employmentType  EmploymentType
+  position        String
+  orgUnitId       String
+  orgUnit         OrgUnit          @relation(fields: [orgUnitId], references: [id])
+  roles           UserRole[]
+  contributions   Contribution[]   @relation("Contributor")
+  recommendations Recommendation[]
+  approvals       Approval[]
+  appeals         Appeal[]
+  auditEvents     AuditEvent[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Contribution {
+  id                  String             @id @default(cuid())
+  contributorId       String
+  contributor         User               @relation("Contributor", fields: [contributorId], references: [id])
+  title               String
+  description         String
+  type                ContributionType
+  activityDate        DateTime
+  relatedOrgUnitCode  String
+  status              ContributionStatus @default(DRAFT)
+  requestedTier       EffortTier
+  expectedCredit      Int
+  submittedWithin30d  Boolean
+  recommendations     Recommendation[]
+  approval            Approval?
+  appeals             Appeal[]
+  reviews             CommitteeReview[]
+  auditEvents         AuditEvent[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model Recommendation {
+  id             String       @id @default(cuid())
+  contributionId String
+  contribution   Contribution @relation(fields: [contributionId], references: [id])
+  recommenderId  String
+  recommender    User         @relation(fields: [recommenderId], references: [id])
+  comment        String?
+  isPrivate      Boolean      @default(false)
+  status         RecommendationStatus @default(REQUESTED)
+  notificationChannel NotificationChannel?
+  notifiedAt     DateTime?
+  submittedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@unique([contributionId, recommenderId])
+}
+
+model Approval {
+  id             String       @id @default(cuid())
+  contributionId String       @unique
+  contribution   Contribution @relation(fields: [contributionId], references: [id])
+  approverId     String
+  approver       User         @relation(fields: [approverId], references: [id])
+  inputScore     Int
+  outcomeScore   Int
+  impactScore    Int
+  finalTier      EffortTier
+  finalCredit    Int
+  decision       ContributionStatus
+  comment        String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Appeal {
+  id             String       @id @default(cuid())
+  contributionId String
+  contribution   Contribution @relation(fields: [contributionId], references: [id])
+  appellantId    String
+  appellant      User         @relation(fields: [appellantId], references: [id])
+  reason         String
+  status         AppealStatus @default(SUBMITTED)
+  resolution     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model CommitteeReview {
+  id             String       @id @default(cuid())
+  contributionId String
+  contribution   Contribution @relation(fields: [contributionId], references: [id])
+  signalType     String
+  severity       String
+  status         ReviewStatus @default(OPEN)
+  note           String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model BudgetPool {
+  id                 String   @id @default(cuid())
+  year               Int
+  term               String
+  totalBudgetKrw     BigInt
+  nominalCreditValue Int
+  issuedCreditLimit  Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([year, term])
+}
+
+model AuditEvent {
+  id             String        @id @default(cuid())
+  actorId        String
+  actor          User          @relation(fields: [actorId], references: [id])
+  contributionId String?
+  contribution   Contribution? @relation(fields: [contributionId], references: [id])
+  action         String
+  details        Json
+  createdAt      DateTime      @default(now())
+}
