@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>TCredit 사이트 이용 매뉴얼</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 14mm 16mm;
+    }
+
+    :root {
+      --ink: #071832;
+      --muted: #52627a;
+      --line: #d8e0ea;
+      --soft: #f4f7fa;
+      --campus: #00765d;
+      --gold: #b98313;
+      --warn: #b45309;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.58;
+      background: white;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.28;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 31pt;
+      font-weight: 800;
+    }
+
+    h2 {
+      margin-top: 22pt;
+      padding-top: 4pt;
+      border-top: 1px solid var(--line);
+      font-size: 18pt;
+      font-weight: 800;
+    }
+
+    h3 {
+      margin-top: 14pt;
+      font-size: 13pt;
+      font-weight: 800;
+    }
+
+    p {
+      margin: 5pt 0 0;
+    }
+
+    ul,
+    ol {
+      margin: 6pt 0 0 18pt;
+      padding: 0;
+    }
+
+    li {
+      margin: 2pt 0;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 8pt;
+      border-collapse: collapse;
+      page-break-inside: avoid;
+      font-size: 9.4pt;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 6pt 7pt;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf3f6;
+      color: #203047;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    .cover {
+      min-height: 246mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8mm 0 4mm;
+      page-break-after: always;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12pt;
+      color: var(--campus);
+      font-weight: 800;
+    }
+
+    .cover-kicker {
+      margin-top: 42mm;
+      color: var(--campus);
+      font-size: 12pt;
+      font-weight: 800;
+    }
+
+    .cover-subtitle {
+      max-width: 150mm;
+      margin-top: 12pt;
+      color: var(--muted);
+      font-size: 14pt;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8pt;
+      margin-top: 26pt;
+    }
+
+    .meta {
+      border: 1px solid var(--line);
+      border-radius: 6pt;
+      padding: 9pt;
+      background: var(--soft);
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--muted);
+      font-size: 8.8pt;
+    }
+
+    .note {
+      margin-top: 10pt;
+      padding: 9pt 10pt;
+      border-left: 4pt solid var(--campus);
+      background: #eef8f4;
+      border-radius: 4pt;
+      page-break-inside: avoid;
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+      background: #fff7ed;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8pt;
+      margin-top: 10pt;
+    }
+
+    .toc div {
+      padding: 8pt;
+      border: 1px solid var(--line);
+      border-radius: 6pt;
+      background: white;
+    }
+
+    .tag {
+      display: inline-block;
+      margin: 1pt 2pt 1pt 0;
+      padding: 1.5pt 6pt;
+      border-radius: 999px;
+      background: #e8f2ef;
+      color: #075f4c;
+      font-size: 8.4pt;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .role-section {
+      page-break-before: always;
+    }
+
+    .steps {
+      margin-top: 8pt;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6pt;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 6pt;
+      padding: 8pt;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+
+    .step strong {
+      color: var(--campus);
+    }
+
+    figure {
+      margin: 11pt 0 4pt;
+      page-break-inside: avoid;
+    }
+
+    figure img {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6pt;
+    }
+
+    figcaption {
+      margin-top: 4pt;
+      color: var(--muted);
+      font-size: 8.6pt;
+    }
+
+    .half-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10pt;
+      align-items: start;
+      margin-top: 8pt;
+    }
+
+    .compact td,
+    .compact th {
+      padding: 5pt 6pt;
+    }
+
+    .status-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6pt;
+      margin-top: 8pt;
+    }
+
+    .status {
+      min-height: 36pt;
+      padding: 7pt;
+      border: 1px solid var(--line);
+      border-radius: 6pt;
+      background: var(--soft);
+      font-size: 9pt;
+    }
+
+    .status strong {
+      display: block;
+      color: var(--campus);
+      font-size: 9.4pt;
+    }
+
+    .footer-note {
+      margin-top: 18pt;
+      color: var(--muted);
+      font-size: 8.4pt;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div>
+      <div class="brand">Keimyung Univ. · T-Credit</div>
+      <p class="cover-kicker">사이트 이용 매뉴얼</p>
+      <h1>TCredit<br />역할별 입력 및 확인 절차</h1>
+      <p class="cover-subtitle">
+        공헌 등록, 추천 의견, 승인 처리, 위원회 심의, 관리자 확인 화면을 실제 로컬 사이트 화면 캡처와 함께 정리한 운영 매뉴얼입니다.
+      </p>
+      <div class="meta-grid">
+        <div class="meta"><strong>기준 화면</strong>http://localhost:3000</div>
+        <div class="meta"><strong>작성일</strong>2026년 6월 8일</div>
+        <div class="meta"><strong>대상</strong>시범운영 사용자 및 운영자</div>
+      </div>
+    </div>
+    <div class="note">
+      본 문서는 현재 로컬 TCredit 사이트와 라이브 PostgreSQL 데이터를 기준으로 작성했습니다. 화면의 공헌 건수, 사용자 이름, 대기 건수는 운영 데이터 변경에 따라 달라질 수 있습니다.
+    </div>
+  </section>
+
+  <section>
+    <h2>빠른 시작</h2>
+    <div class="toc">
+      <div><strong>1. 계정 선택</strong><br />상단 사용자 이름을 눌러 역할별 계정으로 전환합니다.</div>
+      <div><strong>2. 공헌 입력</strong><br />공헌자 계정에서 공헌 제목, 유형, 활동일, 관련 부서, Tier, 내용을 입력합니다.</div>
+      <div><strong>3. 추천 확인</strong><br />추천자로 지정된 사용자는 공헌 내역 화면에서 추천 의견을 입력합니다.</div>
+      <div><strong>4. 승인 처리</strong><br />승인권자는 추천 내용을 확인하고 점수, Tier, 의견을 입력한 뒤 승인 또는 반려합니다.</div>
+      <div><strong>5. 심의/관리</strong><br />위원회와 관리자는 이상 사례, 예산, 사용자 권한, 임계값을 확인합니다.</div>
+      <div><strong>6. 결과 확인</strong><br />공헌 내역과 운영 현황에서 상태와 Credit 반영 결과를 확인합니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/01-dashboard-admin.png" alt="관리자 운영 현황 화면" />
+      <figcaption>운영 현황: 전체 공헌 로그, 승인 대기 건수, 승인 완료 Credit을 한 화면에서 확인합니다.</figcaption>
+    </figure>
+
+    <h2>역할과 기본 메뉴</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>역할</th>
+          <th>주요 메뉴</th>
+          <th>주요 작업</th>
+          <th>예시 계정</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag">CONTRIBUTOR</span><br />공헌자</td>
+          <td>운영 현황, 공헌 입력, 공헌 내역</td>
+          <td>공헌 등록, 본인 공헌 상태 확인, 추천자로 지정된 경우 추천 의견 입력</td>
+          <td>김하늘, 이서연 등</td>
+        </tr>
+        <tr>
+          <td><span class="tag">APPROVER</span><br />승인권자</td>
+          <td>승인 처리, 승인자 조회</td>
+          <td>관련 부서의 승인 대기 공헌 검토, 점수와 Credit 확정, 승인/반려 의견 입력</td>
+          <td>오지훈, 박도윤, 공과대 학장 등</td>
+        </tr>
+        <tr>
+          <td><span class="tag">COMMITTEE</span><br />위원회</td>
+          <td>위원회 심의</td>
+          <td>비공개 의견, 이상 사례, 표본감사, 이의신청 대상 확인</td>
+          <td>정민준, 최유진</td>
+        </tr>
+        <tr>
+          <td><span class="tag">ADMIN</span><br />관리자</td>
+          <td>관리자</td>
+          <td>사용자와 권한, 조직, 예산 풀, 심의 임계값 확인</td>
+          <td>최유진</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <figure>
+      <img src="manual-screenshots/02-account-switcher.png" alt="계정 전환 드롭다운" />
+      <figcaption>계정 전환: 상단 사용자 영역을 누르면 시범운영 계정을 선택할 수 있습니다. 선택한 계정의 역할에 따라 좌측 메뉴가 달라집니다.</figcaption>
+    </figure>
+  </section>
+
+  <section class="role-section">
+    <h2>공헌자: 공헌 입력</h2>
+    <p>공헌자는 실제 기여 내용을 등록하고, 필요한 경우 동료 추천인을 지정합니다. 입력 완료 후 상태는 활동일과 추천인 지정 여부에 따라 달라집니다.</p>
+    <div class="steps">
+      <div class="step"><strong>1. 메뉴 이동</strong><br />좌측 메뉴에서 <b>공헌 입력</b>을 선택합니다.</div>
+      <div class="step"><strong>2. 기본 정보 입력</strong><br />공헌 제목, 공헌 유형, 활동일, 관련 부서, Effort Tier를 입력합니다. 활동일은 미래일이 아니어야 하며, 활동일 기준 30일 이내 입력 건은 추천 및 승인 흐름으로 이동합니다.</div>
+      <div class="step"><strong>3. 공헌 내용 작성</strong><br />기여 배경, 수행 내용, 협업 부서, 결과를 승인자가 판단할 수 있을 만큼 구체적으로 작성합니다.</div>
+      <div class="step"><strong>4. 추천인 선택</strong><br />추천이 필요한 경우 동료추천인 선택 목록에서 추천인을 고르고 <b>추가</b>를 누릅니다. 선택한 추천인은 제출 후 추천 의견 입력 대상이 됩니다.</div>
+      <div class="step"><strong>5. 제출</strong><br />오른쪽 산정 미리보기에서 예상 Credit을 확인한 뒤 <b>제출</b>을 누릅니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/03-contribution-input-filled.png" alt="공헌 입력 예시 화면" />
+      <figcaption>공헌 입력: 제목, 유형, 활동일, 관련 부서, Tier, 공헌 내용, 추천인을 입력합니다. 오른쪽에는 예상 Credit과 Tier 정보가 표시됩니다.</figcaption>
+    </figure>
+
+    <div class="note">
+      추천인을 선택하면 공헌은 먼저 <b>추천 대기</b> 흐름으로 이동합니다. 추천인이 의견을 저장하면 승인권자가 검토할 수 있는 <b>승인 대기</b> 상태로 넘어갑니다.
+    </div>
+  </section>
+
+  <section class="role-section">
+    <h2>공헌자/추천자: 공헌 내역 확인 및 추천 의견</h2>
+    <p>공헌 내역 화면은 본인의 공헌 상태를 확인하는 화면이면서, 추천자로 지정된 사람이 추천 의견을 입력하는 화면이기도 합니다.</p>
+    <div class="steps">
+      <div class="step"><strong>1. 본인 공헌 확인</strong><br />누적 승인 Credit, 입력 공헌 수, 추천 요청 수를 확인합니다.</div>
+      <div class="step"><strong>2. 검색과 기간 필터</strong><br />제목, 내용, 부서, 유형 검색어와 시작/종료일을 입력해 공헌 목록을 좁힙니다.</div>
+      <div class="step"><strong>3. 상태 확인</strong><br />각 공헌의 상태 배지를 확인합니다. 상태 옆 물음표 아이콘은 상태 의미와 다음 단계를 설명합니다.</div>
+      <div class="step"><strong>4. 추천 의견 입력</strong><br />추천 요청이 있는 경우 하단 추천 의견 입력 영역에 의견을 작성하고, 필요하면 비공개 의견으로 제출합니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/04-my-contributions.png" alt="공헌 내역 화면" />
+      <figcaption>공헌 내역: 본인의 입력 공헌과 상태를 확인합니다. 현재 추천 대기 건이 없으면 추천 의견 입력 영역에는 대기 항목이 없다고 표시됩니다.</figcaption>
+    </figure>
+
+    <h3>상태 흐름</h3>
+    <div class="status-flow">
+      <div class="status"><strong>추천 대기</strong>추천인이 의견을 입력해야 하는 단계</div>
+      <div class="status"><strong>승인 대기</strong>승인권자가 점수와 Credit을 검토하는 단계</div>
+      <div class="status"><strong>승인</strong>Credit이 확정되어 내역에 반영된 상태</div>
+      <div class="status"><strong>반려</strong>공헌 인정 대상이 아니거나 보완이 필요한 상태</div>
+      <div class="status"><strong>입력기한 초과</strong>활동일 기준 30일을 초과해 일반 승인 대상에서 제외된 상태</div>
+      <div class="status"><strong>위원회 검토</strong>이의신청, 비공개 의견, 이상 사례 검토 단계</div>
+      <div class="status"><strong>초안</strong>작성 중이며 아직 제출되지 않은 상태</div>
+      <div class="status"><strong>결과 확인</strong>운영 현황과 공헌 내역에서 최종 상태 확인</div>
+    </div>
+  </section>
+
+  <section class="role-section">
+    <h2>승인권자: 승인 처리</h2>
+    <p>승인권자는 자신이 담당하는 관련 부서의 승인 대기 공헌을 검토합니다. 관리자는 전체 범위의 승인 대기 건을 볼 수 있습니다.</p>
+    <div class="steps">
+      <div class="step"><strong>1. 승인 처리 메뉴 이동</strong><br />좌측 <b>승인 처리</b>를 선택합니다. 처리 가능한 공헌이 있으면 가장 먼저 검토할 대상이 표시됩니다.</div>
+      <div class="step"><strong>2. 공헌 내용과 추천 의견 확인</strong><br />제목, 설명, 공헌자, 관련 부서, 활동일, 공개/비공개 추천 의견을 검토합니다.</div>
+      <div class="step"><strong>3. 점수와 Tier 조정</strong><br />참여, 성과, 효과 체크 여부와 최종 Tier를 조정합니다. 오른쪽 승인 산정 영역에서 최종 Credit을 확인합니다.</div>
+      <div class="step"><strong>4. 승인/반려 의견 작성</strong><br />판단 근거를 의견란에 입력합니다.</div>
+      <div class="step"><strong>5. 최종 제출</strong><br /><b>승인</b> 또는 <b>반려</b> 버튼을 누르면 확인 창이 뜹니다. 확인 후 결정이 저장됩니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/05-approval-workbench.png" alt="승인 처리 화면" />
+      <figcaption>승인 처리: 추천 의견을 확인하고 참여, 성과, 효과, 최종 Tier를 조정해 승인 Credit을 산정합니다.</figcaption>
+    </figure>
+
+    <h2>승인권자: 승인자 조회</h2>
+    <p>승인자 조회는 처리 현황을 요약하고, 승인 대기 건이나 처리 편차를 빠르게 확인하는 화면입니다.</p>
+    <div class="steps">
+      <div class="step"><strong>승인율</strong>현재 계정이 처리한 승인/반려 결정 기준의 승인율을 보여줍니다.</div>
+      <div class="step"><strong>발행 Credit</strong>승인 결정으로 누적 발행된 Credit을 보여줍니다.</div>
+      <div class="step"><strong>참고 사항</strong>승인 대기 건수나 운영상 점검이 필요한 조건을 안내합니다.</div>
+      <div class="step"><strong>승인 내역</strong>이미 승인 또는 반려한 건을 확인하고, 항목을 펼쳐 공헌 내용을 확인합니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/06-approver-insights.png" alt="승인자별 조회 화면" />
+      <figcaption>승인자 조회: 승인율, 발행 Credit, 반려 건수, 월별 처리 현황, 승인 내역을 확인합니다.</figcaption>
+    </figure>
+  </section>
+
+  <section class="role-section">
+    <h2>위원회: 심의 및 표본감사 확인</h2>
+    <p>위원회 역할은 일반 승인 화면과 별도로 심의 대기, 비공개 의견, 표본감사, 이의신청 대상을 확인합니다.</p>
+    <div class="steps">
+      <div class="step"><strong>1. 심의 대기 확인</strong><br />이상 징후, 반려 이의신청, 위원회 검토 대상 건수를 확인합니다.</div>
+      <div class="step"><strong>2. 비공개 의견 확인</strong><br />추천자가 비공개로 제출한 의견 수와 검토자료를 확인합니다.</div>
+      <div class="step"><strong>3. 이상 사례 큐 확인</strong><br />열린 이상 사례가 있으면 신호 유형, 심각도, 공헌 내용을 확인합니다.</div>
+      <div class="step"><strong>4. 무작위 표본감사 확인</strong><br />표본감사 대상 공헌과 Credit 규모를 확인합니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/07-committee-review.png" alt="위원회 심의 화면" />
+      <figcaption>위원회 심의: 비공개 의견, 표본감사, 이의신청 현황을 확인합니다.</figcaption>
+    </figure>
+  </section>
+
+  <section class="role-section">
+    <h2>관리자: 사용자, 권한, 예산 확인</h2>
+    <p>관리자는 전체 운영 환경을 확인합니다. 현재 화면은 관리 기능 입력보다는 사용자/권한과 예산 풀, 심의 임계값 확인에 초점이 있습니다.</p>
+    <div class="steps">
+      <div class="step"><strong>1. 사용자 및 권한</strong><br />사용자 이름, 사번, 소속, 직책, 역할을 확인합니다.</div>
+      <div class="step"><strong>2. 예산 풀</strong><br />운영 기간, 총 예산, 1 Credit 명목가치, 발행 가능 Credit을 확인합니다.</div>
+      <div class="step"><strong>3. 심의 임계값</strong><br />승인권자 편중, 반려 비율, 중복 승인 요청, 월말 승인 집중도 등 위원회 점검 조건을 확인합니다.</div>
+      <div class="step"><strong>4. 역할 기반 점검</strong><br />특정 부서의 승인 대기 공헌이 승인권자에게 보이지 않으면 해당 부서에 APPROVER 역할 사용자가 있는지 확인합니다.</div>
+    </div>
+
+    <figure>
+      <img src="manual-screenshots/08-admin-settings.png" alt="관리자 설정 화면" />
+      <figcaption>관리자 설정: 사용자 및 권한, 예산 풀, 심의 임계값을 확인합니다.</figcaption>
+    </figure>
+  </section>
+
+  <section class="role-section">
+    <h2>운영 체크리스트</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>상황</th>
+          <th>확인할 화면</th>
+          <th>조치 기준</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>공헌 제출 후 승인권자에게 보이지 않음</td>
+          <td>공헌 내역, 승인 처리, 관리자</td>
+          <td>추천인이 지정된 건이면 추천 의견 제출 후 승인 대기로 이동합니다. 관련 부서와 승인권자 소속이 일치하는지도 확인합니다.</td>
+        </tr>
+        <tr>
+          <td>추천 의견 입력 영역이 비어 있음</td>
+          <td>공헌 내역</td>
+          <td>현재 사용자에게 요청된 추천 의견이 없거나, 이미 제출되어 대기 목록에서 사라진 상태입니다.</td>
+        </tr>
+        <tr>
+          <td>Credit이 예상과 다름</td>
+          <td>승인 처리, 공헌 내역</td>
+          <td>최종 Credit은 승인권자가 참여, 성과, 효과 점수와 최종 Tier를 조정한 결과입니다.</td>
+        </tr>
+        <tr>
+          <td>입력기한 초과 상태 표시</td>
+          <td>공헌 내역, 운영 현황</td>
+          <td>활동일 기준 30일을 초과한 입력 건은 일반 승인 대상이 아니라 unbillable로 분류됩니다.</td>
+        </tr>
+        <tr>
+          <td>위원회 검토가 필요한 경우</td>
+          <td>위원회 심의</td>
+          <td>비공개 의견, 이상 사례, 이의신청, 표본감사 대상을 확인하고 운영 정책에 따라 후속 처리합니다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note warning">
+      실제 운영 배포 환경에서는 계정 전환 드롭다운이 비활성화될 수 있습니다. 시범운영 또는 개발 환경에서는 역할별 검증을 위해 계정 전환 기능을 사용할 수 있습니다.
+    </div>
+
+    <p class="footer-note">문서 기준: TCredit 로컬 사이트, PostgreSQL 라이브 데이터, 2026년 6월 8일 캡처.</p>
+  </section>
+</body>
+</html>
