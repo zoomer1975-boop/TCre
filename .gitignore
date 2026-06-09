@@ -8,3 +8,6 @@ coverage
 *.tsbuildinfo
 prisma/dev.db
 .docs
+docs/
+script/
+scripts/
