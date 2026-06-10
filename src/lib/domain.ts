@@ -72,8 +72,16 @@ export interface Appeal {
   appellantId: string;
   reason: string;
   status: "SUBMITTED" | "REVIEWING" | "RESOLVED" | "DISMISSED";
+  resolution?: string;
   createdAt: string;
 }
+
+export const appealStatusLabels: Record<Appeal["status"], string> = {
+  SUBMITTED: "접수",
+  REVIEWING: "검토 중",
+  RESOLVED: "재심의 회부",
+  DISMISSED: "기각"
+};
 
 export interface CommitteeReview {
   id: string;
@@ -83,6 +91,12 @@ export interface CommitteeReview {
   status: "OPEN" | "REVIEWING" | "CLOSED";
   note?: string;
 }
+
+export const reviewStatusLabels: Record<CommitteeReview["status"], string> = {
+  OPEN: "접수",
+  REVIEWING: "검토 중",
+  CLOSED: "종결"
+};
 
 export interface Contribution {
   id: string;
@@ -241,11 +255,16 @@ export function calculateCredit(
   return (inputScore + outcomeScore + impactScore) * tierMultipliers[tier];
 }
 
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 export function isSubmittedWithin30Days(activityDate: Date, submittedAt: Date) {
   const millisPerDay = 24 * 60 * 60 * 1000;
-  const diff = submittedAt.getTime() - activityDate.getTime();
+  const diff = startOfLocalDay(submittedAt).getTime() - startOfLocalDay(activityDate).getTime();
+  const dayDiff = Math.round(diff / millisPerDay);
 
-  return diff >= 0 && diff <= 30 * millisPerDay;
+  return dayDiff >= 0 && dayDiff <= 30;
 }
 
 export function formatDateInputValue(date: Date) {

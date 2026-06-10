@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Send } from "lucide-react";
-import { submitRecommendationCommentAction } from "@/app/contributions/mine/actions";
+import { Send, UserX } from "lucide-react";
+import { declineRecommendationAction, submitRecommendationCommentAction } from "@/app/contributions/mine/actions";
 
 const initialState = {
   status: "idle" as const,
@@ -19,6 +19,8 @@ export function RecommendationCommentForm({
   defaultIsPrivate: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(submitRecommendationCommentAction, initialState);
+  const [declineState, declineFormAction, isDeclinePending] = useActionState(declineRecommendationAction, initialState);
+  const isBusy = isPending || isDeclinePending;
 
   return (
     <form action={formAction} className="mt-4 rounded-md border border-line bg-slate-50 p-3">
@@ -40,17 +42,39 @@ export function RecommendationCommentForm({
       </label>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-muted">비공개 의견은 승인자와 위원회 검토 자료로만 사용됩니다.</p>
-        <button
-          disabled={isPending}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-campus px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          <Send className="size-4" aria-hidden="true" />
-          {isPending ? "저장 중" : "의견 저장"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            formAction={declineFormAction}
+            formNoValidate
+            disabled={isBusy}
+            onClick={(event) => {
+              if (!window.confirm("추천 요청을 사양하시겠습니까? 사양하면 이 공헌은 내 추천 없이 승인 단계로 진행됩니다.")) {
+                event.preventDefault();
+              }
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <UserX className="size-4" aria-hidden="true" />
+            {isDeclinePending ? "처리 중" : "추천 사양"}
+          </button>
+          <button
+            disabled={isBusy}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-campus px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <Send className="size-4" aria-hidden="true" />
+            {isPending ? "저장 중" : "의견 저장"}
+          </button>
+        </div>
       </div>
       {state.status !== "idle" ? (
         <p className={`mt-3 text-sm font-semibold ${state.status === "success" ? "text-campus" : "text-rose-700"}`}>
           {state.message}
+        </p>
+      ) : null}
+      {declineState.status !== "idle" ? (
+        <p className={`mt-3 text-sm font-semibold ${declineState.status === "success" ? "text-campus" : "text-rose-700"}`}>
+          {declineState.message}
         </p>
       ) : null}
     </form>

@@ -7,43 +7,36 @@ import { formatNumber } from "@/lib/domain";
 import { createOrgNameLookup, createUserNameLookup } from "@/lib/lookups";
 import { getCurrentUser } from "@/lib/providers/identity";
 import {
+  countContributionsByStatus,
   getBudgetPool,
   listApprovals,
   listContributions,
   listOrgUnits,
-  listRecommendations,
   listUsers
 } from "@/lib/server/tcredit-repository";
 
+const RECENT_CONTRIBUTION_COUNT = 10;
+
 export default async function DashboardPage() {
-  const [currentUser, contributions, approvals, budgetPool, users, orgUnits, recommendations] = await Promise.all([
-    getCurrentUser(),
-    listContributions(),
-    listApprovals(),
+  const currentUser = await getCurrentUser();
+  const [visibleContributions, budgetPool, users, orgUnits, approvedCount, pendingCount] = await Promise.all([
+    listContributions({ visibleTo: currentUser, take: RECENT_CONTRIBUTION_COUNT }),
     getBudgetPool(),
     listUsers(),
     listOrgUnits(),
-    listRecommendations()
+    countContributionsByStatus("APPROVED"),
+    countContributionsByStatus("PENDING_APPROVAL")
   ]);
+  const approvals =
+    visibleContributions.length > 0
+      ? await listApprovals({ contributionIds: visibleContributions.map((item) => item.id) })
+      : [];
   const userNames = createUserNameLookup(users);
   const orgNames = createOrgNameLookup(orgUnits);
-  const approved = contributions.filter((item) => item.status === "APPROVED");
-  const pending = contributions.filter((item) => item.status === "PENDING_APPROVAL");
-  const issuedRate = Math.round((budgetPool.issuedCredit / budgetPool.issuedCreditLimit) * 1000) / 10;
-  const assignedRecommendationContributionIds = new Set(
-    recommendations.filter((item) => item.recommenderId === currentUser.id).map((item) => item.contributionId)
-  );
-  const isOwnOrAssignedRecommendation = (contributionId: string, contributorId: string) =>
-    contributorId === currentUser.id || assignedRecommendationContributionIds.has(contributionId);
-  const visibleContributions = currentUser.roles.includes("ADMIN")
-    ? contributions
-    : currentUser.roles.includes("APPROVER")
-      ? contributions.filter(
-          (item) =>
-            item.relatedOrgUnitCode === currentUser.orgUnitCode &&
-            (item.status !== "PENDING_RECOMMEND" || isOwnOrAssignedRecommendation(item.id, item.contributorId))
-        )
-      : contributions.filter((item) => item.contributorId === currentUser.id);
+  const issuedRate =
+    budgetPool.issuedCreditLimit > 0
+      ? Math.round((budgetPool.issuedCredit / budgetPool.issuedCreditLimit) * 1000) / 10
+      : null;
 
   return (
     <>
@@ -62,9 +55,13 @@ export default async function DashboardPage() {
         }
       />
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="승인 Credit" value={`${formatNumber(budgetPool.issuedCredit)} C`} detail={`발행 한도 대비 ${issuedRate}%`} />
-        <StatCard label="승인 완료" value={`${approved.length}건`} detail="즉시 공헌 내역에 반영" />
-        <StatCard label="승인 대기" value={`${pending.length}건`} detail="추천 및 승인권자 검토 필요" />
+        <StatCard
+          label="승인 Credit"
+          value={`${formatNumber(budgetPool.issuedCredit)} C`}
+          detail={issuedRate === null ? "발행 한도 미설정" : `발행 한도 대비 ${issuedRate}%`}
+        />
+        <StatCard label="승인 완료" value={`${formatNumber(approvedCount)}건`} detail="즉시 공헌 내역에 반영" />
+        <StatCard label="승인 대기" value={`${formatNumber(pendingCount)}건`} detail="추천 및 승인권자 검토 필요" />
       </section>
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">

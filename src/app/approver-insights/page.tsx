@@ -19,22 +19,6 @@ function canSeeAllApprovals(user: User) {
   return user.roles.includes("ADMIN");
 }
 
-function filterApprovalsForUser(approvals: Approval[], user: User) {
-  if (canSeeAllApprovals(user)) {
-    return approvals;
-  }
-
-  return approvals.filter((approval) => approval.approverId === user.id);
-}
-
-function filterPendingContributionsForUser(contributions: Contribution[], user: User) {
-  return contributions.filter(
-    (contribution) =>
-      contribution.status === "PENDING_APPROVAL" &&
-      (canSeeAllApprovals(user) || contribution.relatedOrgUnitCode === user.orgUnitCode)
-  );
-}
-
 function buildMonthlyApprovalSummaries(approvals: Approval[]): MonthlyApprovalSummary[] {
   const counts = approvals.reduce<Map<string, number>>((result, approval) => {
     const date = new Date(approval.createdAt);
@@ -125,19 +109,23 @@ function buildAutomaticWarnings({
 }
 
 export default async function ApproverInsightsPage() {
-  const [currentUser, approvals, contributions, users] = await Promise.all([
-    getCurrentUser(),
-    listApprovals(),
-    listContributions(),
-    listUsers()
-  ]);
+  const currentUser = await getCurrentUser();
   if (!canAccessRole(currentUser, "APPROVER")) {
     notFound();
   }
 
+  const [scopedApprovals, pendingContributions, users] = await Promise.all([
+    listApprovals(canSeeAllApprovals(currentUser) ? undefined : { approverId: currentUser.id }),
+    listContributions({
+      status: "PENDING_APPROVAL",
+      ...(canSeeAllApprovals(currentUser) ? {} : { relatedOrgUnitCode: currentUser.orgUnitCode })
+    }),
+    listUsers()
+  ]);
+  const approvedContributionIds = [...new Set(scopedApprovals.map((approval) => approval.contributionId))];
+  const contributions =
+    approvedContributionIds.length > 0 ? await listContributions({ ids: approvedContributionIds }) : [];
   const userNames = createUserNameLookup(users);
-  const scopedApprovals = filterApprovalsForUser(approvals, currentUser);
-  const pendingContributions = filterPendingContributionsForUser(contributions, currentUser);
   const monthlySummaries = buildMonthlyApprovalSummaries(scopedApprovals);
   const automaticWarnings = buildAutomaticWarnings({
     approvals: scopedApprovals,

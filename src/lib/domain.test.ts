@@ -57,6 +57,12 @@ describe("T-Credit domain rules", () => {
     expect(resolveInitialStatus(new Date("2026-05-02"), new Date("2026-06-02"))).toBe("UNBILLABLE");
   });
 
+  it("ignores the time of day when checking the 30-day window", () => {
+    expect(isSubmittedWithin30Days(new Date(2026, 4, 3), new Date(2026, 5, 2, 23, 59))).toBe(true);
+    expect(isSubmittedWithin30Days(new Date(2026, 4, 2), new Date(2026, 5, 2, 0, 1))).toBe(false);
+    expect(isSubmittedWithin30Days(new Date(2026, 5, 2, 9, 0), new Date(2026, 5, 2, 8, 0))).toBe(true);
+  });
+
   it("routes current submissions by recommender assignment", () => {
     expect(resolveInitialStatus(new Date("2026-06-01"), new Date("2026-06-02"), false)).toBe("PENDING_APPROVAL");
     expect(resolveInitialStatus(new Date("2026-06-01"), new Date("2026-06-02"), true)).toBe("PENDING_RECOMMEND");

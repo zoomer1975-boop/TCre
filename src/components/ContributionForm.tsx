@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { type FormEvent, useActionState, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Plus, Send, X } from "lucide-react";
 import { createContributionAction } from "@/app/contributions/actions";
 import {
@@ -18,6 +18,11 @@ import {
 
 const contributionTypes = Object.keys(contributionTypeLabels) as ContributionType[];
 const tiers = Object.keys(tierLabels) as EffortTier[];
+
+function parseLocalDateInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
 const initialContributionActionState = {
   status: "idle" as const,
   message: ""
@@ -43,8 +48,8 @@ export function ContributionForm({
   const [selectedRecommenderIds, setSelectedRecommenderIds] = useState<string[]>([]);
 
   const within30Days = useMemo(
-    () => (activityDate ? isSubmittedWithin30Days(new Date(activityDate), new Date(today)) : undefined),
-    [activityDate]
+    () => (activityDate ? isSubmittedWithin30Days(parseLocalDateInput(activityDate), parseLocalDateInput(today)) : undefined),
+    [activityDate, today]
   );
   const expectedCredit = tier ? calculateCredit(1, 1, 1, tier) : 0;
   const selectedTierDetail = tier ? tierDetails[tier] : undefined;
@@ -77,9 +82,20 @@ export function ContributionForm({
     setSelectedRecommenderIds((previous) => previous.filter((item) => item !== userId));
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (
+      within30Days === false &&
+      !window.confirm(
+        "활동일 기준 30일이 지나 입력기한 초과(unbillable)로 분류됩니다. 승인 대상에서 제외된 상태로 저장할까요?"
+      )
+    ) {
+      event.preventDefault();
+    }
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-      <form className="rounded-lg border border-line bg-white p-5 shadow-soft" action={formAction}>
+      <form className="rounded-lg border border-line bg-white p-5 shadow-soft" action={formAction} onSubmit={handleSubmit}>
         <input type="hidden" name="inputScore" value="1" />
         <input type="hidden" name="outcomeScore" value="1" />
         <input type="hidden" name="impactScore" value="1" />
@@ -177,7 +193,7 @@ export function ContributionForm({
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <select
-              name="recommenderIds"
+              aria-label="추천인 선택"
               value={recommenderSelectValue}
               onChange={(event) => setRecommenderSelectValue(event.target.value)}
               className="min-w-0 flex-1 rounded-md border border-line bg-white px-3 py-2 text-sm"

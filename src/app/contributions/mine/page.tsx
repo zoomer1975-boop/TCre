@@ -1,14 +1,15 @@
-import { Sparkles } from "lucide-react";
 import Link from "next/link";
+import { AppealForm } from "@/components/AppealForm";
 import { StatusBadge, TextBadge } from "@/components/Badge";
 import { ContributionTable } from "@/components/ContributionTable";
 import { PageHeader } from "@/components/PageHeader";
 import { RecommendationCommentForm } from "@/components/RecommendationCommentForm";
 import { StatCard } from "@/components/StatCard";
-import { contributionTypeLabels, formatNumber } from "@/lib/domain";
+import { appealStatusLabels, contributionTypeLabels, formatNumber, statusLabels } from "@/lib/domain";
 import { createOrgNameLookup, createUserNameLookup } from "@/lib/lookups";
 import { getCurrentUser } from "@/lib/providers/identity";
 import {
+  listAppeals,
   listApprovals,
   listContributions,
   listOrgUnits,
@@ -49,16 +50,16 @@ export default async function MinePage({
   const dateTo = readParam(resolvedSearchParams.dateTo);
   const requestedPage = Number.parseInt(readParam(resolvedSearchParams.page), 10);
   const user = await getCurrentUser();
-  const [contributions, approvals, recommendations, users, orgUnits] = await Promise.all([
-    listContributions(),
-    listApprovals(),
-    listRecommendations(),
+  const [myContributions, approvals, myRecommendations, users, orgUnits, myAppeals] = await Promise.all([
+    listContributions({ contributorId: user.id }),
+    listApprovals({ contributorId: user.id }),
+    listRecommendations({ recommenderId: user.id }),
     listUsers(),
-    listOrgUnits()
+    listOrgUnits(),
+    listAppeals({ appellantId: user.id })
   ]);
   const userNames = createUserNameLookup(users);
   const orgNames = createOrgNameLookup(orgUnits);
-  const myContributions = contributions.filter((item) => item.contributorId === user.id);
   const normalizedQuery = q.toLowerCase();
   const filteredContributions = myContributions.filter((item) => {
     const matchesDateFrom = dateFrom ? item.activityDate >= dateFrom : true;
@@ -68,7 +69,7 @@ export default async function MinePage({
       item.description,
       contributionTypeLabels[item.type],
       orgNames[item.relatedOrgUnitCode] ?? item.relatedOrgUnitCode,
-      item.status
+      statusLabels[item.status]
     ]
       .join(" ")
       .toLowerCase();
@@ -83,14 +84,26 @@ export default async function MinePage({
   const resultStart = filteredContributions.length > 0 ? pageStart + 1 : 0;
   const resultEnd = Math.min(pageStart + PAGE_SIZE, filteredContributions.length);
   const myApprovedCredit = myContributions.reduce((sum, contribution) => {
+    if (contribution.status !== "APPROVED") {
+      return sum;
+    }
+
     const approval = approvals.find((item) => item.contributionId === contribution.id);
     return sum + (approval?.finalCredit ?? 0);
   }, 0);
-  const assignedRecommendations = recommendations.filter(
-    (item) => item.recommenderId === user.id && item.status === "REQUESTED"
+  const assignedRecommendations = myRecommendations.filter((item) => item.status === "REQUESTED");
+  const assignedContributionIds = [...new Set(assignedRecommendations.map((item) => item.contributionId))];
+  const assignedContributions =
+    assignedContributionIds.length > 0 ? await listContributions({ ids: assignedContributionIds }) : [];
+  const latestAppealByContribution = new Map<string, (typeof myAppeals)[number]>();
+  for (const appeal of myAppeals) {
+    if (!latestAppealByContribution.has(appeal.contributionId)) {
+      latestAppealByContribution.set(appeal.contributionId, appeal);
+    }
+  }
+  const appealableContributions = myContributions.filter(
+    (item) => item.status === "REJECTED" || latestAppealByContribution.has(item.id)
   );
-  const assignedContributionIds = new Set(assignedRecommendations.map((item) => item.contributionId));
-  const assignedContributions = contributions.filter((item) => assignedContributionIds.has(item.id));
 
   return (
     <>
@@ -103,19 +116,6 @@ export default async function MinePage({
         <StatCard label="누적 승인 Credit" value={`${formatNumber(myApprovedCredit)} C`} detail="" />
         <StatCard label="입력 공헌" value={`${myContributions.length}건`} detail="" />
         <StatCard label="추천 요청" value={`${assignedRecommendations.length}건`} detail="" />
-      </section>
-      <section className="mt-6 rounded-lg border border-line bg-white p-5 shadow-soft">
-        <div className="flex items-start gap-3">
-          <Sparkles className="mt-1 size-5 text-gold" aria-hidden="true" />
-          <div>
-            <h2 className="text-lg font-bold text-ink">AI 요약 초안 (구현 예정)</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {myContributions.length > 0
-                ? `${user.name} 구성원은 입력된 공헌 기록을 기준으로 부서 간 협업, 업무 개선, 일정 준수 기여를 요약할 수 있습니다. LLM 연동 전까지는 규칙 기반 초안으로 표시합니다.`
-                : "아직 본인 공헌 입력이 없습니다. 새 공헌을 입력하면 이 영역에 규칙 기반 요약 초안이 표시됩니다."}
-            </p>
-          </div>
-        </div>
       </section>
       <section className="mt-6 rounded-lg border border-line bg-white shadow-soft">
         <div className="flex flex-col gap-4 border-b border-line p-5 md:flex-row md:items-end md:justify-between">
@@ -256,6 +256,55 @@ export default async function MinePage({
         ) : (
           <div className="rounded-lg border border-line bg-white p-5 text-sm text-muted shadow-soft">
             현재 입력 대기 중인 추천 의견이 없습니다.
+          </div>
+        )}
+      </section>
+      <section className="mt-6">
+        <h2 className="mb-3 text-lg font-bold text-ink">반려 및 이의신청</h2>
+        {appealableContributions.length > 0 ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {appealableContributions.map((contribution) => {
+              const approval = approvals.find((item) => item.contributionId === contribution.id);
+              const appeal = latestAppealByContribution.get(contribution.id);
+              const canAppeal =
+                contribution.status === "REJECTED" &&
+                (!appeal || appeal.status === "RESOLVED" || appeal.status === "DISMISSED");
+
+              return (
+                <article key={contribution.id} className="rounded-lg border border-line bg-white p-5 shadow-soft">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={contribution.status} />
+                    <TextBadge tone="campus">{contributionTypeLabels[contribution.type]}</TextBadge>
+                    {appeal ? <TextBadge tone="warning">이의신청 {appealStatusLabels[appeal.status]}</TextBadge> : null}
+                  </div>
+                  <h3 className="mt-3 font-bold text-ink">{contribution.title}</h3>
+                  {approval?.comment ? (
+                    <p className="mt-3 rounded-md bg-rose-50 p-3 text-sm leading-6 text-rose-700">
+                      <span className="font-semibold">반려 사유</span> {approval.comment}
+                    </p>
+                  ) : null}
+                  {appeal ? (
+                    <div className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6">
+                      <p className="text-muted">
+                        <span className="font-semibold text-ink">신청 사유</span> {appeal.reason}
+                      </p>
+                      {appeal.resolution ? (
+                        <p className="mt-2 text-muted">
+                          <span className="font-semibold text-ink">위원회 처리 의견</span> {appeal.resolution}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-muted">위원회 검토 결과를 기다리는 중입니다.</p>
+                      )}
+                    </div>
+                  ) : null}
+                  {canAppeal ? <AppealForm contributionId={contribution.id} /> : null}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-line bg-white p-5 text-sm text-muted shadow-soft">
+            반려된 공헌이나 진행 중인 이의신청이 없습니다.
           </div>
         )}
       </section>

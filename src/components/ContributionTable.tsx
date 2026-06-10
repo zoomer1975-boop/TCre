@@ -48,6 +48,7 @@ export function ContributionTable({
         <tbody className="divide-y divide-line">
           {rows.length > 0 ? rows.map((row) => {
             const approval = approvals.find((item) => item.contributionId === row.id);
+            const isDecided = row.status === "APPROVED" || row.status === "REJECTED";
 
             return (
               <tr key={row.id} className="align-top">
@@ -60,6 +61,16 @@ export function ContributionTable({
                     </summary>
                   </details>
                   <p className="mt-2 text-xs text-muted">활동일 {row.activityDate}</p>
+                  {isDecided && approval?.comment ? (
+                    <p
+                      className={`mt-2 rounded-md p-2 text-xs leading-5 ${
+                        row.status === "REJECTED" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-800"
+                      }`}
+                    >
+                      <span className="font-semibold">{row.status === "REJECTED" ? "반려 사유" : "승인 의견"}</span>{" "}
+                      {approval.comment}
+                    </p>
+                  ) : null}
                 </td>
                 {showContributor ? (
                   <td className="px-4 py-4 font-medium text-ink">{userNames[row.contributorId] ?? row.contributorId}</td>
@@ -74,8 +85,20 @@ export function ContributionTable({
                 <td className="px-4 py-4">
                   <StatusBadge status={row.status} />
                 </td>
-                <td className="px-4 py-4 font-bold text-ink">
-                  {formatNumber(approval?.finalCredit ?? row.expectedCredit)} C
+                <td className="px-4 py-4">
+                  {row.status === "APPROVED" && approval ? (
+                    <>
+                      <p className="font-bold text-ink">{formatNumber(approval.finalCredit)} C</p>
+                      <p className="mt-0.5 text-xs font-semibold text-campus">확정</p>
+                    </>
+                  ) : row.status === "REJECTED" || row.status === "UNBILLABLE" ? (
+                    <span className="text-muted">-</span>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-ink">{formatNumber(row.expectedCredit)} C</p>
+                      <p className="mt-0.5 text-xs text-muted">예상(최대)</p>
+                    </>
+                  )}
                 </td>
               </tr>
             );

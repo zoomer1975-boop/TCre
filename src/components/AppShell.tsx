@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -59,7 +59,31 @@ export function AppShell({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const visibleItems = navItems.filter((item) => canAccessRole(user, item.role));
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   function switchUser(userId: string) {
     const nextUser = users.find((item) => item.id === userId);
@@ -156,7 +180,7 @@ export function AppShell({
       <div className="min-w-0">
         <header className="border-b border-line bg-white px-5 py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="relative">
+            <div className="relative" ref={accountMenuRef}>
               <button
                 type="button"
                 onClick={() => setOpen((value) => !value)}

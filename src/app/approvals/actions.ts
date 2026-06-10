@@ -63,7 +63,8 @@ export async function submitApprovalAction(
     });
   } catch (error) {
     const message =
-      error instanceof Error && (error.message.includes("권한") || error.message.includes("찾을 수 없습니다"))
+      error instanceof Error &&
+      (error.message.includes("권한") || error.message.includes("찾을 수 없습니다") || error.message.includes("한도"))
         ? error.message
         : "승인/반려 처리 중 오류가 발생했습니다.";
 

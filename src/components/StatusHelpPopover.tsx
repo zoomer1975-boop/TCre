@@ -27,9 +27,9 @@ export function StatusHelpPopover() {
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const titleId = useId();
-  const guideEntries = Object.entries(statusGuides) as Array<
-    [ContributionStatus, (typeof statusGuides)[ContributionStatus]]
-  >;
+  const guideEntries = (
+    Object.entries(statusGuides) as Array<[ContributionStatus, (typeof statusGuides)[ContributionStatus]]>
+  ).filter(([status]) => status !== "DRAFT");
 
   useEffect(() => {
     setMounted(true);

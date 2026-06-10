@@ -12,6 +12,7 @@ import {
   OrgUnit,
   Recommendation,
   User,
+  canAccessRole,
   canApproveContribution,
   calculateCredit
 } from "@/lib/domain";
@@ -71,6 +72,7 @@ type PrismaAppealRow = {
   appellantId: string;
   reason: string;
   status: Appeal["status"];
+  resolution: string | null;
   createdAt: Date;
 };
 
@@ -163,8 +165,11 @@ export async function listOrgUnits(): Promise<OrgUnit[]> {
   }));
 }
 
-export async function listAppeals(): Promise<Appeal[]> {
+export async function listAppeals(filter?: { appellantId?: string }): Promise<Appeal[]> {
   const rows = (await prisma.appeal.findMany({
+    where: {
+      ...(filter?.appellantId ? { appellantId: filter.appellantId } : {})
+    },
     orderBy: { createdAt: "desc" }
   })) as PrismaAppealRow[];
 
@@ -174,20 +179,66 @@ export async function listAppeals(): Promise<Appeal[]> {
     appellantId: item.appellantId,
     reason: item.reason,
     status: item.status,
+    resolution: item.resolution ?? undefined,
     createdAt: toDateString(item.createdAt)
   }));
 }
 
-export async function listContributions(): Promise<Contribution[]> {
+function contributionVisibilityWhere(user: User): Prisma.ContributionWhereInput {
+  if (user.roles.includes("ADMIN")) {
+    return {};
+  }
+
+  if (user.roles.includes("APPROVER")) {
+    return {
+      relatedOrgUnitCode: user.orgUnitCode,
+      OR: [
+        { status: { not: "PENDING_RECOMMEND" } },
+        { contributorId: user.id },
+        { recommendations: { some: { recommenderId: user.id } } }
+      ]
+    };
+  }
+
+  return { contributorId: user.id };
+}
+
+export async function listContributions(filter?: {
+  contributorId?: string;
+  ids?: string[];
+  status?: ContributionStatus;
+  relatedOrgUnitCode?: string;
+  visibleTo?: User;
+  take?: number;
+}): Promise<Contribution[]> {
+  const baseWhere: Prisma.ContributionWhereInput = {
+    ...(filter?.contributorId ? { contributorId: filter.contributorId } : {}),
+    ...(filter?.ids ? { id: { in: filter.ids } } : {}),
+    ...(filter?.status ? { status: filter.status } : {}),
+    ...(filter?.relatedOrgUnitCode ? { relatedOrgUnitCode: filter.relatedOrgUnitCode } : {})
+  };
   const rows = await prisma.contribution.findMany({
-    orderBy: { createdAt: "desc" }
+    where: filter?.visibleTo ? { AND: [baseWhere, contributionVisibilityWhere(filter.visibleTo)] } : baseWhere,
+    orderBy: { createdAt: "desc" },
+    ...(filter?.take ? { take: filter.take } : {})
   });
 
   return rows.map(mapPrismaContribution);
 }
 
-export async function listRecommendations(): Promise<Recommendation[]> {
+export async function countContributionsByStatus(status: ContributionStatus) {
+  return prisma.contribution.count({ where: { status } });
+}
+
+export async function listRecommendations(filter?: {
+  contributionId?: string;
+  recommenderId?: string;
+}): Promise<Recommendation[]> {
   const rows = (await prisma.recommendation.findMany({
+    where: {
+      ...(filter?.contributionId ? { contributionId: filter.contributionId } : {}),
+      ...(filter?.recommenderId ? { recommenderId: filter.recommenderId } : {})
+    },
     orderBy: { createdAt: "desc" }
   })) as PrismaRecommendationRow[];
 
@@ -205,10 +256,17 @@ export async function listRecommendations(): Promise<Recommendation[]> {
   }));
 }
 
-export async function listApprovals(): Promise<Approval[]> {
+export async function listApprovals(filter?: {
+  contributionIds?: string[];
+  contributorId?: string;
+  approverId?: string;
+}): Promise<Approval[]> {
   const rows = (await prisma.approval.findMany({
     where: {
-      decision: { in: ["APPROVED", "REJECTED"] }
+      decision: { in: ["APPROVED", "REJECTED"] },
+      ...(filter?.contributionIds ? { contributionId: { in: filter.contributionIds } } : {}),
+      ...(filter?.contributorId ? { contribution: { contributorId: filter.contributorId } } : {}),
+      ...(filter?.approverId ? { approverId: filter.approverId } : {})
     },
     orderBy: { createdAt: "desc" }
   })) as PrismaApprovalRow[];
@@ -382,6 +440,29 @@ export async function submitApproval(input: {
         ? calculateCredit(input.inputScore, input.outcomeScore, input.impactScore, input.finalTier)
         : 0;
 
+    if (input.decision === "APPROVED") {
+      const pool = await tx.budgetPool.findFirst({
+        orderBy: [{ year: "desc" }, { createdAt: "desc" }]
+      });
+
+      if (pool) {
+        const issued = await tx.approval.aggregate({
+          _sum: { finalCredit: true },
+          where: {
+            decision: "APPROVED",
+            contributionId: { not: input.contributionId }
+          }
+        });
+        const issuedCredit = issued._sum.finalCredit ?? 0;
+
+        if (issuedCredit + finalCredit > pool.issuedCreditLimit) {
+          throw new Error(
+            `Credit 발행 한도를 초과해 승인할 수 없습니다. (잔여 한도 ${Math.max(pool.issuedCreditLimit - issuedCredit, 0)} C)`
+          );
+        }
+      }
+    }
+
     const saved = await tx.approval.upsert({
       where: { contributionId: input.contributionId },
       create: {
@@ -445,6 +526,25 @@ export async function submitApproval(input: {
   } satisfies Approval;
 }
 
+async function advanceContributionIfRecommendationsDone(tx: Prisma.TransactionClient, contributionId: string) {
+  const remainingRequestedCount = await tx.recommendation.count({
+    where: {
+      contributionId,
+      status: "REQUESTED"
+    }
+  });
+
+  if (remainingRequestedCount === 0) {
+    await tx.contribution.updateMany({
+      where: {
+        id: contributionId,
+        status: "PENDING_RECOMMEND"
+      },
+      data: { status: "PENDING_APPROVAL" }
+    });
+  }
+}
+
 export async function submitRecommendationComment(input: {
   recommendationId: string;
   recommenderId: string;
@@ -457,9 +557,9 @@ export async function submitRecommendationComment(input: {
       select: { id: true, contributionId: true, recommenderId: true }
     });
 
-  if (!recommendation || recommendation.recommenderId !== input.recommenderId) {
-    throw new Error("해당 추천 의견을 입력할 권한이 없습니다.");
-  }
+    if (!recommendation || recommendation.recommenderId !== input.recommenderId) {
+      throw new Error("해당 추천 의견을 입력할 권한이 없습니다.");
+    }
 
     const saved = await tx.recommendation.update({
       where: { id: input.recommendationId },
@@ -471,22 +571,189 @@ export async function submitRecommendationComment(input: {
       }
     });
 
-    const remainingRecommendationCount = await tx.recommendation.count({
+    await advanceContributionIfRecommendationsDone(tx, recommendation.contributionId);
+
+    return saved;
+  });
+}
+
+export async function declineRecommendation(input: { recommendationId: string; recommenderId: string }) {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const recommendation = await tx.recommendation.findUnique({
+      where: { id: input.recommendationId },
+      select: { id: true, contributionId: true, recommenderId: true, status: true }
+    });
+
+    if (!recommendation || recommendation.recommenderId !== input.recommenderId) {
+      throw new Error("해당 추천 요청을 처리할 권한이 없습니다.");
+    }
+
+    if (recommendation.status !== "REQUESTED") {
+      throw new Error("이미 처리된 추천 요청입니다.");
+    }
+
+    const saved = await tx.recommendation.update({
+      where: { id: input.recommendationId },
+      data: { status: "CANCELED" }
+    });
+
+    await advanceContributionIfRecommendationsDone(tx, recommendation.contributionId);
+
+    return saved;
+  });
+}
+
+export async function createAppeal(input: { actor: User; contributionId: string; reason: string }) {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const contribution = await tx.contribution.findUnique({
+      where: { id: input.contributionId },
+      select: { id: true, contributorId: true, status: true }
+    });
+
+    if (!contribution || contribution.contributorId !== input.actor.id) {
+      throw new Error("본인 공헌에 대해서만 이의신청할 수 있습니다.");
+    }
+
+    if (contribution.status !== "REJECTED") {
+      throw new Error("반려된 공헌만 이의신청할 수 있습니다.");
+    }
+
+    const openAppealCount = await tx.appeal.count({
       where: {
-        contributionId: recommendation.contributionId,
-        status: { not: "SUBMITTED" }
+        contributionId: input.contributionId,
+        status: { in: ["SUBMITTED", "REVIEWING"] }
       }
     });
 
-    if (remainingRecommendationCount === 0) {
-      await tx.contribution.updateMany({
-        where: {
-          id: recommendation.contributionId,
-          status: "PENDING_RECOMMEND"
-        },
-        data: { status: "PENDING_APPROVAL" }
-      });
+    if (openAppealCount > 0) {
+      throw new Error("이미 진행 중인 이의신청이 있습니다.");
     }
+
+    const appeal = await tx.appeal.create({
+      data: {
+        contributionId: input.contributionId,
+        appellantId: input.actor.id,
+        reason: input.reason
+      }
+    });
+
+    await tx.contribution.update({
+      where: { id: input.contributionId },
+      data: { status: "UNDER_REVIEW" }
+    });
+
+    await tx.committeeReview.create({
+      data: {
+        contributionId: input.contributionId,
+        signalType: "이의신청",
+        severity: "보통",
+        status: "OPEN",
+        note: input.reason.slice(0, 200)
+      }
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        actorId: input.actor.id,
+        contributionId: input.contributionId,
+        action: "APPEAL_SUBMITTED",
+        details: { reason: input.reason }
+      }
+    });
+
+    return appeal;
+  });
+}
+
+export async function resolveAppeal(input: {
+  actor: User;
+  appealId: string;
+  decision: "RESOLVED" | "DISMISSED";
+  resolution: string;
+}) {
+  if (!canAccessRole(input.actor, "COMMITTEE")) {
+    throw new Error("위원회 심의 권한이 없습니다.");
+  }
+
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const appeal = await tx.appeal.findUnique({
+      where: { id: input.appealId },
+      select: { id: true, contributionId: true, status: true }
+    });
+
+    if (!appeal) {
+      throw new Error("이의신청을 찾을 수 없습니다.");
+    }
+
+    if (appeal.status === "RESOLVED" || appeal.status === "DISMISSED") {
+      throw new Error("이미 처리된 이의신청입니다.");
+    }
+
+    const saved = await tx.appeal.update({
+      where: { id: input.appealId },
+      data: {
+        status: input.decision,
+        resolution: input.resolution
+      }
+    });
+
+    await tx.contribution.updateMany({
+      where: {
+        id: appeal.contributionId,
+        status: "UNDER_REVIEW"
+      },
+      data: { status: input.decision === "RESOLVED" ? "PENDING_APPROVAL" : "REJECTED" }
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        actorId: input.actor.id,
+        contributionId: appeal.contributionId,
+        action: input.decision === "RESOLVED" ? "APPEAL_RESOLVED" : "APPEAL_DISMISSED",
+        details: { resolution: input.resolution }
+      }
+    });
+
+    return saved;
+  });
+}
+
+export async function updateCommitteeReviewStatus(input: {
+  actor: User;
+  reviewId: string;
+  status: "REVIEWING" | "CLOSED";
+}) {
+  if (!canAccessRole(input.actor, "COMMITTEE")) {
+    throw new Error("위원회 심의 권한이 없습니다.");
+  }
+
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const review = await tx.committeeReview.findUnique({
+      where: { id: input.reviewId },
+      select: { id: true, contributionId: true, status: true }
+    });
+
+    if (!review) {
+      throw new Error("심의 항목을 찾을 수 없습니다.");
+    }
+
+    if (review.status === "CLOSED") {
+      throw new Error("이미 종결된 심의 항목입니다.");
+    }
+
+    const saved = await tx.committeeReview.update({
+      where: { id: input.reviewId },
+      data: { status: input.status }
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        actorId: input.actor.id,
+        contributionId: review.contributionId,
+        action: input.status === "REVIEWING" ? "REVIEW_STARTED" : "REVIEW_CLOSED",
+        details: { reviewId: input.reviewId }
+      }
+    });
 
     return saved;
   });
