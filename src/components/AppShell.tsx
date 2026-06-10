@@ -116,7 +116,7 @@ export function AppShell({
             />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-muted">Keimyung Univ.</p>
-              <p className="text-lg font-bold tracking-normal text-ink">T-Credit</p>
+              <p className="text-lg font-bold tracking-normal text-ink">Contribution Log</p>
             </div>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:overflow-visible">

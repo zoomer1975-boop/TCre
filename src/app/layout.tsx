@@ -10,7 +10,7 @@ import {
 } from "@/lib/server/tcredit-repository";
 
 export const metadata: Metadata = {
-  title: "T-Credit",
+  title: "Contribution Log",
   description: "Contribution Log and T-Credit MVP"
 };
 
