@@ -407,6 +407,30 @@ export async function createContribution(input: {
   return mapPrismaContribution(contribution);
 }
 
+function isSerializationConflict(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2034"
+  );
+}
+
+// 발행 한도 검사(합계 조회 → 비교 → 저장)가 동시 승인 시 한도를 초과하지
+// 않도록 Serializable 격리로 실행하고, 직렬화 충돌 시 1회 재시도한다.
+async function runSerializableTransaction<T>(
+  fn: (tx: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  try {
+    return await prisma.$transaction(fn, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (!isSerializationConflict(error)) {
+      throw error;
+    }
+    return prisma.$transaction(fn, { isolationLevel: "Serializable" });
+  }
+}
+
 export async function submitApproval(input: {
   actor: User;
   contributionId: string;
@@ -417,7 +441,7 @@ export async function submitApproval(input: {
   decision: Extract<ContributionStatus, "APPROVED" | "REJECTED">;
   comment: string;
 }) {
-  const approval = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const approval = await runSerializableTransaction(async (tx: Prisma.TransactionClient) => {
     const contribution = await tx.contribution.findUnique({
       where: { id: input.contributionId },
       select: {

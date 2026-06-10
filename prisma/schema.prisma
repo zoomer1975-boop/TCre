@@ -79,6 +79,8 @@ model OrgUnit {
   users     User[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([parentId])
 }
 
 model User {
@@ -120,6 +122,10 @@ model Contribution {
   auditEvents         AuditEvent[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
+
+  @@index([contributorId, createdAt])
+  @@index([relatedOrgUnitCode, status])
+  @@index([status])
 }
 
 model Recommendation {
@@ -137,6 +143,7 @@ model Recommendation {
   createdAt      DateTime     @default(now())
 
   @@unique([contributionId, recommenderId])
+  @@index([recommenderId, status])
 }
 
 model Approval {
@@ -154,6 +161,9 @@ model Approval {
   comment        String
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@index([approverId])
+  @@index([decision])
 }
 
 model Appeal {
@@ -167,6 +177,9 @@ model Appeal {
   resolution     String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@index([contributionId])
+  @@index([appellantId])
 }
 
 model CommitteeReview {
@@ -179,6 +192,8 @@ model CommitteeReview {
   note           String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@index([contributionId])
 }
 
 model BudgetPool {
@@ -203,4 +218,7 @@ model AuditEvent {
   action         String
   details        Json
   createdAt      DateTime      @default(now())
+
+  @@index([contributionId])
+  @@index([actorId, createdAt])
 }
